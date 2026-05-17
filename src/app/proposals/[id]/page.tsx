@@ -4,6 +4,7 @@ import { fetchProposalDetail } from '@/lib/agent/fetch';
 import ProposalReview from './proposal-review';
 import { formatUsd, formatUsdRounded } from '@/lib/catalog/pricing';
 import { formatUsd as formatLlmUsd } from '@/lib/anthropic/pricing';
+import { env } from '@/lib/env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -68,6 +69,7 @@ export default async function ProposalPage(
                 hasApproval={Boolean(approval)}
                 sentAt={proposal.sent_at}
                 stripeDepositUrl={proposal.stripe_deposit_url}
+                defaultApproverEmail={env.APPROVER_EMAILS[0] ?? ''}
             />
 
             <section className="grid md:grid-cols-2 gap-6">

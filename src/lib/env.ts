@@ -21,7 +21,12 @@ function required(name: string): string {
 
 function optional(name: string): string | undefined {
     const v = process.env[name];
-    return v && v.length > 0 ? v : undefined;
+    if (!v || v.length === 0) return undefined;
+    // Treat unfilled placeholders from .env.example (e.g. "sk_test_...",
+    // "re_...") as unset so the mock fallback kicks in instead of failing
+    // with a real API "invalid key" error.
+    if (v.endsWith('...') || v === '...') return undefined;
+    return v;
 }
 
 export const env = {

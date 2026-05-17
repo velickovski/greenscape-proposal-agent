@@ -28,6 +28,7 @@ interface Props {
     hasApproval: boolean;
     sentAt: string | null;
     stripeDepositUrl: string | null;
+    defaultApproverEmail: string;
 }
 
 function formatUsd(cents: number): string {
@@ -41,7 +42,7 @@ export default function ProposalReview(props: Props) {
     const [items, setItems] = useState(props.lineItems);
     const [edits, setEdits] = useState<Record<string, { quantity?: number; delete?: boolean }>>({});
     const [saving, setSaving] = useState(false);
-    const [approverEmail, setApproverEmail] = useState('marcus@greenscapepro.test');
+    const [approverEmail, setApproverEmail] = useState(props.defaultApproverEmail || 'marcus@greenscapepro.test');
     const [sendBusy, setSendBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
