@@ -1,65 +1,87 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { listProposals } from '@/lib/agent/fetch';
+import { formatUsdRounded } from '@/lib/catalog/pricing';
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function StatusPill({ status }: { status: string }) {
+    const cls =
+        status === 'sent' ? 'pill pill-sent' :
+        status === 'approved' ? 'pill pill-approved' :
+        status === 'extracted' ? 'pill pill-extracted' :
+        status === 'rejected' ? 'pill pill-rejected' :
+        'pill pill-draft';
+    return <span className={cls}>{status}</span>;
+}
+
+export default async function Home() {
+    let proposals: Awaited<ReturnType<typeof listProposals>> = [];
+    let loadError: string | null = null;
+    try {
+        proposals = await listProposals(20);
+    } catch (e) {
+        loadError = (e as Error).message;
+    }
+
+    return (
+        <div className="space-y-6">
+            <section>
+                <h1 className="text-2xl font-bold text-ink">Dashboard</h1>
+                <p className="text-sm text-muted mt-1">
+                    Latest proposals. Paste site-walk notes into a new proposal and the agent will draft a priced PDF for your review.
+                </p>
+            </section>
+
+            {loadError ? (
+                <div className="card p-6 border-l-4" style={{ borderLeftColor: 'var(--danger)' }}>
+                    <p className="text-sm font-semibold text-ink">Could not load proposals.</p>
+                    <p className="text-xs text-muted mt-1">{loadError}</p>
+                    <p className="text-xs text-muted mt-3">
+                        If this is a fresh install: confirm your Supabase env vars are set and that migrations <code>0001_init.sql</code> and <code>0002_seed_catalog.sql</code> have been applied.
+                    </p>
+                </div>
+            ) : proposals.length === 0 ? (
+                <div className="card p-8 text-center">
+                    <p className="text-sm text-muted">No proposals yet.</p>
+                    <Link href="/proposals/new" className="btn btn-primary mt-4 inline-flex">
+                        Create your first proposal
+                    </Link>
+                </div>
+            ) : (
+                <div className="card overflow-hidden">
+                    <table className="w-full text-sm">
+                        <thead className="bg-[#F4F1EB] text-muted">
+                            <tr>
+                                <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider">Project</th>
+                                <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider">Client</th>
+                                <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider">Total</th>
+                                <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider">Status</th>
+                                <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider">Created</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {proposals.map(({ proposal, client }) => (
+                                <tr key={proposal.id} className="border-t border-rule hover:bg-[#FAF8F5]">
+                                    <td className="px-5 py-3 font-semibold">{proposal.title}</td>
+                                    <td className="px-5 py-3 text-muted">{client.name}</td>
+                                    <td className="px-5 py-3 text-right font-mono">{formatUsdRounded(proposal.total_cents)}</td>
+                                    <td className="px-5 py-3"><StatusPill status={proposal.status} /></td>
+                                    <td className="px-5 py-3 text-right text-muted text-xs">
+                                        {new Date(proposal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </td>
+                                    <td className="px-5 py-3 text-right">
+                                        <Link href={`/proposals/${proposal.id}`} className="text-brand font-semibold text-xs hover:underline">
+                                            Open →
+                                        </Link>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    );
 }
