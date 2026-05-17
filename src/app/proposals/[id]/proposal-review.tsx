@@ -15,6 +15,14 @@ interface LineItemView {
     llm_notes: string | null;
 }
 
+interface CatalogChoice {
+    sku_id: string;
+    name: string;
+    category: string;
+    unit: string;
+    unit_price_cents: number;
+}
+
 interface Props {
     proposalId: string;
     status: string;
@@ -29,6 +37,7 @@ interface Props {
     sentAt: string | null;
     stripeDepositUrl: string | null;
     defaultApproverEmail: string;
+    catalog: CatalogChoice[];
 }
 
 function formatUsd(cents: number): string {
@@ -47,6 +56,38 @@ export default function ProposalReview(props: Props) {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [, startTransition] = useTransition();
+
+    const [showAdd, setShowAdd] = useState(false);
+    const [addSku, setAddSku] = useState<string>(props.catalog[0]?.sku_id ?? '');
+    const [addQty, setAddQty] = useState<string>('1');
+    const [addBusy, setAddBusy] = useState(false);
+
+    async function handleAddLine() {
+        const qtyNum = parseFloat(addQty);
+        if (!addSku || !Number.isFinite(qtyNum) || qtyNum <= 0) {
+            setError('Pick a catalog item and a positive quantity.');
+            return;
+        }
+        setAddBusy(true);
+        setError(null);
+        try {
+            const res = await fetch(`/api/proposals/${props.proposalId}/line-items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sku_id: addSku, quantity: qtyNum }),
+            });
+            if (!res.ok) {
+                const j = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+                setError(j.message ?? j.error ?? `Add failed (HTTP ${res.status}).`);
+                return;
+            }
+            setShowAdd(false);
+            setAddQty('1');
+            startTransition(() => router.refresh());
+        } finally {
+            setAddBusy(false);
+        }
+    }
 
     const isEditable = props.status === 'extracted' || props.status === 'draft';
     const subtotal = items.reduce((s, it) => s + it.line_total_cents, 0);
@@ -152,10 +193,10 @@ export default function ProposalReview(props: Props) {
                     <thead className="text-xs text-muted">
                         <tr className="border-b border-rule">
                             <th className="text-left px-5 py-2 font-medium">Item</th>
-                            <th className="text-right px-3 py-2 font-medium w-20">Qty</th>
-                            <th className="text-left px-3 py-2 font-medium w-12">Unit</th>
+                            <th className="text-right px-3 py-2 font-medium w-28">Qty</th>
+                            <th className="text-left px-3 py-2 font-medium w-14">Unit</th>
                             <th className="text-right px-3 py-2 font-medium w-28">Rate</th>
-                            <th className="text-right px-3 py-2 font-medium w-28">Line total</th>
+                            <th className="text-right px-3 py-2 font-medium w-32">Line total</th>
                             {isEditable ? <th className="w-12" /> : null}
                         </tr>
                     </thead>
@@ -214,6 +255,53 @@ export default function ProposalReview(props: Props) {
                         <button type="button" onClick={saveEdits} disabled={saving} className="btn btn-primary">
                             {saving ? 'Saving…' : 'Save edits & re-render PDF'}
                         </button>
+                    </div>
+                ) : null}
+                {isEditable ? (
+                    <div className="px-5 py-3 border-t border-rule">
+                        {!showAdd ? (
+                            <button type="button" onClick={() => setShowAdd(true)} className="text-sm text-brand font-semibold hover:underline">
+                                + Add line item from catalog
+                            </button>
+                        ) : (
+                            <div className="grid grid-cols-12 gap-3 items-end">
+                                <div className="col-span-7 space-y-1">
+                                    <label className="label">Catalog item</label>
+                                    <select
+                                        className="input"
+                                        value={addSku}
+                                        onChange={(e) => setAddSku(e.target.value)}
+                                    >
+                                        {Array.from(new Set(props.catalog.map((c) => c.category))).map((cat) => (
+                                            <optgroup key={cat} label={cat.toUpperCase()}>
+                                                {props.catalog.filter((c) => c.category === cat).map((c) => (
+                                                    <option key={c.sku_id} value={c.sku_id}>
+                                                        {c.name} — {formatUsd(c.unit_price_cents)}/{c.unit}
+                                                    </option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="col-span-3 space-y-1">
+                                    <label className="label">Quantity</label>
+                                    <input
+                                        type="number" step="0.01" min="0"
+                                        className="input text-right"
+                                        value={addQty}
+                                        onChange={(e) => setAddQty(e.target.value)}
+                                    />
+                                </div>
+                                <div className="col-span-2 flex gap-2 justify-end">
+                                    <button type="button" onClick={() => setShowAdd(false)} className="btn btn-ghost" disabled={addBusy}>
+                                        Cancel
+                                    </button>
+                                    <button type="button" onClick={handleAddLine} className="btn btn-primary" disabled={addBusy}>
+                                        {addBusy ? 'Adding…' : 'Add'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : null}
             </div>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fetchProposalDetail } from '@/lib/agent/fetch';
+import { loadCatalog } from '@/lib/catalog/load';
 import ProposalReview from './proposal-review';
 import { formatUsd, formatUsdRounded } from '@/lib/catalog/pricing';
 import { formatUsd as formatLlmUsd } from '@/lib/anthropic/pricing';
@@ -13,7 +14,10 @@ export default async function ProposalPage(
     { params }: { params: Promise<{ id: string }> },
 ) {
     const { id } = await params;
-    const detail = await fetchProposalDetail(id);
+    const [detail, catalog] = await Promise.all([
+        fetchProposalDetail(id),
+        loadCatalog(),
+    ]);
     if (!detail) return notFound();
     const { proposal, client, line_items, approval, audit_log } = detail;
 
@@ -100,6 +104,13 @@ export default async function ProposalPage(
                 sentAt={proposal.sent_at}
                 stripeDepositUrl={proposal.stripe_deposit_url}
                 defaultApproverEmail={env.APPROVER_EMAILS[0] ?? ''}
+                catalog={catalog.map((c) => ({
+                    sku_id: c.sku_id,
+                    name: c.name,
+                    category: c.category,
+                    unit: c.unit,
+                    unit_price_cents: c.unit_price_cents,
+                }))}
             />
 
             <section className="grid md:grid-cols-2 gap-6">
