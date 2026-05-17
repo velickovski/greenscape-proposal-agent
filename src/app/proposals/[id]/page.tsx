@@ -45,6 +45,36 @@ export default async function ProposalPage(
                 </div>
             </div>
 
+            {(() => {
+                const extracted = audit_log.find((row) => row.event === 'extracted');
+                const sanity = audit_log.find((row) => row.event === 'sanity_check_warning');
+                const extractWarnings = ((extracted?.payload as { warnings?: unknown[] } | undefined)?.warnings ?? []) as string[];
+                const sanityChecks = ((sanity?.payload as { checks?: { code: string; severity: string; message: string }[] } | undefined)?.checks ?? []);
+                if (extractWarnings.length === 0 && sanityChecks.length === 0) return null;
+                return (
+                    <section className="card p-6 border-l-4" style={{ borderLeftColor: 'var(--warning)' }}>
+                        <h3 className="label" style={{ color: 'var(--warning)' }}>Discuss with the customer before sending</h3>
+                        <p className="text-xs text-muted mt-1">
+                            The agent skipped or flagged these because it would not quote a size, material, or service the customer didn&apos;t explicitly ask for. Resolve each one and either regenerate or add a manual line.
+                        </p>
+                        <ul className="mt-3 space-y-2 text-sm leading-relaxed">
+                            {extractWarnings.map((w, i) => (
+                                <li key={`w${i}`} className="flex gap-2">
+                                    <span style={{ color: 'var(--warning)' }} aria-hidden>⚠</span>
+                                    <span>{w}</span>
+                                </li>
+                            ))}
+                            {sanityChecks.map((c, i) => (
+                                <li key={`s${i}`} className="flex gap-2">
+                                    <span style={{ color: 'var(--warning)' }} aria-hidden>•</span>
+                                    <span>{c.message}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                );
+            })()}
+
             <ProposalReview
                 proposalId={proposal.id}
                 status={proposal.status}
