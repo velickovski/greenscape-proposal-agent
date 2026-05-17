@@ -115,20 +115,41 @@ export default async function ProposalPage(
 
             <section className="grid md:grid-cols-2 gap-6">
                 <div className="card p-6">
-                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">PDF preview</h3>
-                    <div className="mt-3 rounded-md overflow-hidden border border-rule">
-                        <iframe
-                            src={`/api/proposals/${proposal.id}/pdf`}
-                            className="w-full"
-                            style={{ height: '600px', background: '#525659' }}
-                            title="Proposal PDF"
-                        />
-                    </div>
-                    <div className="mt-3 text-xs text-muted">
-                        <a href={`/api/proposals/${proposal.id}/pdf`} target="_blank" className="text-brand font-semibold hover:underline" rel="noreferrer">
-                            Open PDF in new tab →
-                        </a>
-                    </div>
+                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">PDF</h3>
+                    {proposal.status === 'sent' ? (
+                        <>
+                            <p className="text-xs text-muted mt-2">
+                                Rendered against the final state at send time. This is what the customer received.
+                            </p>
+                            <div className="mt-3 rounded-md overflow-hidden border border-rule">
+                                <iframe
+                                    src={`/api/proposals/${proposal.id}/pdf`}
+                                    className="w-full"
+                                    style={{ height: '600px', background: '#525659' }}
+                                    title="Proposal PDF"
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-xs text-muted mt-2 leading-relaxed">
+                                The PDF is generated when you click <strong>Approve &amp; send</strong> below — that way you don&apos;t spend cycles re-rendering on every edit, and the customer always gets the final state.
+                            </p>
+                            <div className="mt-3 flex gap-3">
+                                <a
+                                    href={`/api/proposals/${proposal.id}/pdf`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn btn-ghost text-sm"
+                                >
+                                    Preview PDF in new tab
+                                </a>
+                            </div>
+                            <p className="mt-3 text-xs text-muted italic">
+                                Tip: previewing renders the PDF on demand against current state. Each preview is a fresh render — no cached stale views.
+                            </p>
+                        </>
+                    )}
                 </div>
                 <div className="space-y-6">
                     <div className="card p-6">

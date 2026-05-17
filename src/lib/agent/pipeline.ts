@@ -189,8 +189,8 @@ export async function createProposal(input: CreateProposalInput): Promise<Create
             .eq('id', proposalId);
         if (updErr) throw new Error(`proposal update: ${updErr.message}`);
 
-        // 9) Render + upload PDF
-        await renderAndStorePdf(proposalId);
+        // PDF is intentionally NOT rendered here. It renders inside sendProposal()
+        // when Marcus clicks Approve & Send, against the final edited state.
 
         return {
             proposalId,
@@ -324,9 +324,21 @@ export async function sendProposal(args: { proposalId: string }): Promise<SendRe
     const p = data as unknown as Row;
 
     if (!p.client.email) throw new Error('Send blocked: client has no email on file.');
-    if (!p.pdf_storage_path) throw new Error('Send blocked: PDF was not rendered.');
 
-    const pdf = await downloadProposalPdf(p.pdf_storage_path);
+    // Render the PDF against the final edited state. This is where dollars
+    // get locked in — no more edits after this.
+    await renderAndStorePdf(p.id);
+
+    // Re-fetch to pick up pdf_storage_path written by renderAndStorePdf.
+    const { data: refreshed } = await supabase
+        .from('proposals')
+        .select('pdf_storage_path')
+        .eq('id', p.id)
+        .single();
+    const pdfPath = (refreshed?.pdf_storage_path as string | null) ?? null;
+    if (!pdfPath) throw new Error('Send blocked: PDF render did not produce a file.');
+
+    const pdf = await downloadProposalPdf(pdfPath);
 
     // Stripe deposit link.
     const depositCents = Math.round(p.total_cents * (Number(p.deposit_pct) / 100));

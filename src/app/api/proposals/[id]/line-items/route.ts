@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getSupabase } from '@/lib/supabase/server';
 import { writeAudit } from '@/lib/supabase/audit';
-import { renderAndStorePdf } from '@/lib/agent/pipeline';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -90,7 +89,7 @@ export async function POST(
         payload: { action: 'manual_add', sku_id: sku.sku_id, quantity: parsed.data.quantity, subtotal },
     });
 
-    await renderAndStorePdf(id);
+    // PDF is rendered later, at send time, against the final edited state.
 
     return NextResponse.json({ ok: true, subtotal_cents: subtotal });
 }
@@ -163,7 +162,7 @@ export async function PATCH(
     });
 
     // Re-render PDF.
-    await renderAndStorePdf(id);
+    // PDF is rendered later, at send time, against the final edited state.
 
     return NextResponse.json({ ok: true, subtotal_cents: subtotal });
 }

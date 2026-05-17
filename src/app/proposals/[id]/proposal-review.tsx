@@ -253,7 +253,7 @@ export default function ProposalReview(props: Props) {
                             Discard
                         </button>
                         <button type="button" onClick={saveEdits} disabled={saving} className="btn btn-primary">
-                            {saving ? 'Saving…' : 'Save edits & re-render PDF'}
+                            {saving ? 'Saving…' : 'Save edits'}
                         </button>
                     </div>
                 ) : null}
