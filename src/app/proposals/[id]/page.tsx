@@ -80,6 +80,7 @@ export default async function ProposalPage(
             })()}
 
             <ProposalReview
+                key={`${line_items.length}-${proposal.subtotal_cents}`}
                 proposalId={proposal.id}
                 status={proposal.status}
                 lineItems={line_items.map((li) => ({
