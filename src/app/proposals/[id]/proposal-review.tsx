@@ -54,9 +54,10 @@ export default function ProposalReview(props: Props) {
     function updateQty(id: string, qty: number) {
         const item = items.find((i) => i.id === id);
         if (!item) return;
-        const raw = Math.round(qty * item.unit_price_cents);
-        // approximate; server is the source of truth on save
-        const newTotal = Math.max(raw, item.line_total_cents > raw ? item.line_total_cents : raw);
+        // Optimistic client-side preview only — server recomputes against the
+        // catalog min_charge_cents on save. This matches qty * unit price and
+        // intentionally does not enforce min charges here.
+        const newTotal = Math.max(0, Math.round(qty * item.unit_price_cents));
         setItems(items.map((i) => (i.id === id ? { ...i, quantity: qty, line_total_cents: newTotal } : i)));
         setEdits({ ...edits, [id]: { ...edits[id], quantity: qty } });
     }
